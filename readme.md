@@ -1,7 +1,4 @@
-## Cutie Chaser
-<p align="center">
-![Cutie Chaser, ofc](https://remywiki.com/images/f/fa/CUTIE_CHASER_banner_old.png)
-</p>
+<p align="center"><img src="https://remywiki.com/images/f/fa/CUTIE_CHASER_banner_old.png"></p>
 
 Note: this is specifically for stepmania/openITG.
 
