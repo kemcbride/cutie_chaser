@@ -8,6 +8,7 @@ from oauth2client.tools import argparser
 
 
 OAUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
+VIDEO = 'youtube#video'
 
 
 class TrackInfo(object):
@@ -65,21 +66,42 @@ def create_playlist(service, name, desc=""):
     return playlists_insert_response
 
 
+def add_item_to_playlist(service, playlistId, videoId):
+    # peep this:
+    import ipdb; ipdb.set_trace()
+    request_data = {
+            'snippet': {
+                'playlistId': playlistId,
+                'resourceId': {
+                    'kind': VIDEO,
+                    'videoId': videoId,
+                    },
+                }
+            }
+    response = service.playlistItems().insert(
+            body=request_data,
+            part='snippet',
+            ).execute()
+    return response
+
+
 def search_keywords(service, track):
     q = ' '.join(track.extra_shit)
     results = service.search().list(
             q=q, maxResults=1, part="id,snippet",
             ).execute()
+    results = results.get('items', [])
     
-    vid_results = [x for x in results.get('items', []) if x['id']['kind'] == 'video']
+    vid_results = [x for x in results if x['id']['kind'] == VIDEO]
     if vid_results:
-        x = vid_results[0]
+        return vid_results[0]
         # print('{} ~~~ {} ~~ {}'.format(
         #     x['snippet']['title'],
         #     x['snippet']['channelTitle'],
         #     track.extra_shit,
         #     # x['snippet']['thumbnails']['url'],
         #     ))
+    return None
 
 
 def get_val(sm_config_line):
@@ -128,6 +150,7 @@ def get_track_titles(path):
 
 def main():
     argparser.add_argument('path', help='path to sm pack')
+    argparser.add_argument('--playlist_id', help='existing playlist id to add to')
     args = argparser.parse_args()
 
     # Note: we have args.path here (to extract keywords with)
@@ -137,10 +160,14 @@ def main():
 
     svc = get_authenticated_service(args)
     vid_results = [search_keywords(svc, track) for track in track_info]
-    playlist = create_playlist(svc, name, desc=playlist_desc)
+
+    playlist_id = args.playlist_id if args.playlist_id else create_playlist(svc, name, desc=playlist_desc)['id']
     # Alright! Maybe it'd be cool to produce a link to the playlist at the end.
 
-    import ipdb; ipdb.set_trace() # let's just take a lookie loo
+    for vid in vid_results:
+        resp = add_item_to_playlist(svc, playlist_id, vid['id']['videoId'])
+        # it raises if it fails, lol... :(
+
 
 
 if __name__ == '__main__':
