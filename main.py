@@ -1,5 +1,3 @@
-#!bin/python3
-
 import re
 import os
 import sys
@@ -8,7 +6,9 @@ from oauth2client import client
 from auth import get_authenticated_service
 from oauth2client.tools import argparser
 
+
 OAUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
+
 
 class TrackInfo(object):
     def __init__(self, name, extra_shit=None):
@@ -22,6 +22,7 @@ def get_packname(full_path):
     packname = path_elements[-1] if path_elements[-1] else path_elements[-2]
     return  packname
     
+
 def create_description(full_path, track_info_list):
     # return a string that's like, long and has the proper info for all the tracks,
     packname = get_packname(full_path)
@@ -34,6 +35,7 @@ def create_description(full_path, track_info_list):
         "if there are mistakes, this has the proper track listing at least.",
         ] + track_data_fmted)
     return desc
+
 
 def list_channels(service):
   results = service.channels().list(
@@ -60,7 +62,6 @@ def create_playlist(service, name, desc=""):
         )
       )
     ).execute()
-    import ipdb; ipdb.set_trace() # let's just take a lookie loo
     return playlists_insert_response
 
 
@@ -80,12 +81,14 @@ def search_keywords(service, track):
         #     # x['snippet']['thumbnails']['url'],
         #     ))
 
+
 def get_val(sm_config_line):
     # a config line looks like '#NAME: value'
     value = sm_config_line.split(':')[-1].strip()
     # well, assuming that it doesn't contain any damn semi colons
     value = value.split(';')[0]
     return value
+
 
 def parse_title_artist(sm_path):
     artist = ''
@@ -123,18 +126,22 @@ def get_track_titles(path):
     return shit
 
 
-def main(args):
+def main():
+    argparser.add_argument('path', help='path to sm pack')
+    args = argparser.parse_args()
+
     # Note: we have args.path here (to extract keywords with)
     track_info = get_track_titles(args.path)
-    playlist_desc = create_description(args.path, track_info)
-    svc = get_authenticated_service(args)
-    print(playlist_desc)
-    vid_results = [search_keywords(svc, track) for track in track_info]
     name = get_packname(args.path)
+    playlist_desc = create_description(args.path, track_info)
+
+    svc = get_authenticated_service(args)
+    vid_results = [search_keywords(svc, track) for track in track_info]
     playlist = create_playlist(svc, name, desc=playlist_desc)
+    # Alright! Maybe it'd be cool to produce a link to the playlist at the end.
+
+    import ipdb; ipdb.set_trace() # let's just take a lookie loo
 
 
 if __name__ == '__main__':
-    argparser.add_argument('path', help='path to sm pack')
-    args = argparser.parse_args()
-    main(args)
+    main()
