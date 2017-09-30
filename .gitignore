@@ -3,4 +3,5 @@ include/
 lib/
 share/
 */__pycache__/*
+*.py-oauth2.json
 OAUTH.json
