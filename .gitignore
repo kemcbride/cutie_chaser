@@ -1,4 +1,4 @@
 bin/
 include/
 lib/
-OAUTH_BULLSHIT.json
+OAUTH.json
