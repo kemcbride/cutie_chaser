@@ -1,10 +1,9 @@
-import re
 import os
 import sys
-import json
 from oauth2client import client
-from auth import get_authenticated_service
 from oauth2client.tools import argparser
+
+from auth import get_authenticated_service
 
 
 OAUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
@@ -17,11 +16,17 @@ class TrackInfo(object):
         self.extra_shit = extra_shit
 
 
+def construct_playlist_url(playlist_id, video_id):
+    # please don't punk me- video id must be in the playlist, ofc.
+    youtube_url = 'https://www.youtube.com/watch'
+    return '{}?v={}&list={}'.format(youtube_url, video_id, playlist_id)
+
+
 def get_packname(full_path):
     # this is shitty
     path_elements = full_path.split('/')
     packname = path_elements[-1] if path_elements[-1] else path_elements[-2]
-    return  packname
+    return packname
     
 
 def create_description(full_path, track_info_list):
@@ -38,19 +43,9 @@ def create_description(full_path, track_info_list):
     return desc
 
 
-def list_channels(service):
-  results = service.channels().list(
-    **kwargs
-  ).execute()
-
-  print('This channel\'s ID is %s. Its title is %s, and it has %s views.' %
-       (results['items'][0]['id'],
-        results['items'][0]['snippet']['title'],
-        results['items'][0]['statistics']['viewCount']))
-
-
 def create_playlist(service, name, desc=""):
     # This code creates a new playlist in the user's channel.
+    # #thanksgoogle
     playlists_insert_response = service.playlists().insert(
       part="snippet,status",
       body=dict(
@@ -67,8 +62,6 @@ def create_playlist(service, name, desc=""):
 
 
 def add_item_to_playlist(service, playlistId, videoId):
-    # peep this:
-    import ipdb; ipdb.set_trace()
     request_data = {
             'snippet': {
                 'playlistId': playlistId,
@@ -95,19 +88,19 @@ def search_keywords(service, track):
     vid_results = [x for x in results if x['id']['kind'] == VIDEO]
     if vid_results:
         return vid_results[0]
-        # print('{} ~~~ {} ~~ {}'.format(
-        #     x['snippet']['title'],
-        #     x['snippet']['channelTitle'],
-        #     track.extra_shit,
-        #     # x['snippet']['thumbnails']['url'],
-        #     ))
+        print('{} ~~~ {} ~~ {}'.format(
+            x['snippet']['title'],
+            x['snippet']['channelTitle'],
+            track.extra_shit,
+            # x['snippet']['thumbnails']['url'],
+            ))
     return None
 
 
 def get_val(sm_config_line):
     # a config line looks like '#NAME: value'
     value = sm_config_line.split(':')[-1].strip()
-    # well, assuming that it doesn't contain any damn semi colons
+    # well, assuming that it doesn't contain any semi colons
     value = value.split(';')[0]
     return value
 
@@ -116,8 +109,7 @@ def parse_title_artist(sm_path):
     artist = ''
     title = ''
     with open(sm_path, 'r') as s:
-        # honestly if it's not in th;e first 20 lines what are they doing,
-        # fucking with me???
+        # honestly if it's not in th;e first 20 lines what are they doing
         for line in s:
             if artist != '' and title != '':
                 break
@@ -161,13 +153,14 @@ def main():
     svc = get_authenticated_service(args)
     vid_results = [search_keywords(svc, track) for track in track_info]
 
-    playlist_id = args.playlist_id if args.playlist_id else create_playlist(svc, name, desc=playlist_desc)['id']
-    # Alright! Maybe it'd be cool to produce a link to the playlist at the end.
+    playlist_response = create_playlist(svc, name, desc=playlist_desc)
+    playlist_id = args.playlist_id if args.playlist_id else playlist_response['id']
 
     for vid in vid_results:
         resp = add_item_to_playlist(svc, playlist_id, vid['id']['videoId'])
-        # it raises if it fails, lol... :(
 
+    first_vid_id = vid_results[0]['id']['videoId']
+    print(construct_playlist_url(playlist_id, first_vid_id))
 
 
 if __name__ == '__main__':
