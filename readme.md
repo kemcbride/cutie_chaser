@@ -28,3 +28,11 @@ Peep these, for example:
 [Ninjafar's Insanely Cute Electronic Simfile Troop](https://www.youtube.com/watch?v=Ys9sIqv42lo&list=PL_B30pn44WOU-QqkJIwVhPp6xu0Y09DMj)
 - no errors as far as I can tell, out of 12 tracks?
 
+
+## More Technically Speaking
+
+Check out these reference links for parsing sm files
+(and analogously per the different NoteLoader files)
+
+- https://github.com/stepmania/stepmania/blob/master/src/MsdFile.cpp
+- https://github.com/stepmania/stepmania/blob/master/src/NotesLoaderSM.cpp
