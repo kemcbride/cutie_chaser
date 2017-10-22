@@ -5,6 +5,8 @@ from oauth2client.tools import argparser
 
 from auth import get_authenticated_service
 
+from parser import parse_sm
+
 
 OAUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
 VIDEO = 'youtube#video'
@@ -97,30 +99,7 @@ def search_keywords(service, track):
     return None
 
 
-def get_val(sm_config_line):
-    # a config line looks like '#NAME: value'
-    value = sm_config_line.split(':')[-1].strip()
-    # well, assuming that it doesn't contain any semi colons
-    value = value.split(';')[0]
-    return value
-
-
-def parse_title_artist(sm_path):
-    artist = ''
-    title = ''
-    with open(sm_path, 'r') as s:
-        # honestly if it's not in th;e first 20 lines what are they doing
-        for line in s:
-            if artist != '' and title != '':
-                break
-            if '#ARTIST:' in line:
-                artist = get_val(line)
-            elif '#TITLE:' in line:
-                title = get_val(line)
-    return title, artist
-
-
-def get_track_titles(path):
+def get_tracks(path):
     pack_contents = os.listdir(path)
     shit = []
     for p in pack_contents:
@@ -134,33 +113,43 @@ def get_track_titles(path):
             # babe, what if there's mroe than one sm??? huh???
             # babe, what if it's an ssc and not an sm?? huh???
             sm = sm[0]
-            # Parse sm here and get info
-            title, artist = parse_title_artist('/'.join([path, p, sm]))
-            shit.append(TrackInfo(p, extra_shit=(title, artist)))
+            smdata = parse_sm(path + p + '/' + sm)
+            title = smdata['TITLE']
+            subtitle = smdata['SUBTITLE']
+            artist = smdata['ARTIST']
+            genre = smdata['GENRE']
+            shit.append(TrackInfo(p, extra_shit=(title, subtitle, artist, genre)))
     return shit
 
 
 def main():
     argparser.add_argument('path', help='path to sm pack')
     argparser.add_argument('--playlist_id', help='existing playlist id to add to')
+    argparser.add_argument('--noop', action='store_true', help='don\'t actually create a playlist')
+    argparser.add_argument('--verbose', '-v', action='store_true', help='print potentially useful data')
     args = argparser.parse_args()
 
-    # Note: we have args.path here (to extract keywords with)
-    track_info = get_track_titles(args.path)
+    track_info = get_tracks(args.path)
     name = get_packname(args.path)
     playlist_desc = create_description(args.path, track_info)
+    if args.verbose:
+        print('Pack name: {}'.format(name))
+        for track in track_info:
+            print(track.extra_shit)
 
     svc = get_authenticated_service(args)
     vid_results = [search_keywords(svc, track) for track in track_info]
 
-    playlist_response = create_playlist(svc, name, desc=playlist_desc)
-    playlist_id = args.playlist_id if args.playlist_id else playlist_response['id']
 
-    for vid in vid_results:
-        resp = add_item_to_playlist(svc, playlist_id, vid['id']['videoId'])
+    if not args.noop:
+        playlist_response = create_playlist(svc, name, desc=playlist_desc)
+        playlist_id = args.playlist_id if args.playlist_id else playlist_response['id']
 
-    first_vid_id = vid_results[0]['id']['videoId']
-    print(construct_playlist_url(playlist_id, first_vid_id))
+        for vid in vid_results:
+            resp = add_item_to_playlist(svc, playlist_id, vid['id']['videoId'])
+
+        first_vid_id = vid_results[0]['id']['videoId']
+        print(construct_playlist_url(playlist_id, first_vid_id))
 
 
 if __name__ == '__main__':
