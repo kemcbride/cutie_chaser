@@ -2,6 +2,7 @@ bin/
 include/
 lib/
 share/
+resources/
 */__pycache__/*
 *.py-oauth2.json
 src/client_secret.json
