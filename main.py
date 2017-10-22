@@ -90,12 +90,7 @@ def search_keywords(service, track):
     vid_results = [x for x in results if x['id']['kind'] == VIDEO]
     if vid_results:
         return vid_results[0]
-        print('{} ~~~ {} ~~ {}'.format(
-            x['snippet']['title'],
-            x['snippet']['channelTitle'],
-            track.extra_shit,
-            # x['snippet']['thumbnails']['url'],
-            ))
+    print("NOTE: Couldn't find any results for query: {}".format(q))
     return None
 
 
@@ -114,10 +109,10 @@ def get_tracks(path):
             # babe, what if it's an ssc and not an sm?? huh???
             sm = sm[0]
             smdata = parse_sm(path + p + '/' + sm)
-            title = smdata['TITLE']
-            subtitle = smdata['SUBTITLE']
-            artist = smdata['ARTIST']
-            genre = smdata['GENRE']
+            title = smdata.get('TITLE', '')
+            subtitle = smdata.get('SUBTITLE', '')
+            artist = smdata.get('ARTIST', '')
+            genre = smdata.get('GENRE', '')
             shit.append(TrackInfo(p, extra_shit=(title, subtitle, artist, genre)))
     return shit
 
@@ -125,7 +120,7 @@ def get_tracks(path):
 def main():
     argparser.add_argument('path', help='path to sm pack')
     argparser.add_argument('--playlist_id', help='existing playlist id to add to')
-    argparser.add_argument('--noop', action='store_true', help='don\'t actually create a playlist')
+    argparser.add_argument('--noop', '-n', action='store_true', help='don\'t actually create a playlist')
     argparser.add_argument('--verbose', '-v', action='store_true', help='print potentially useful data')
     args = argparser.parse_args()
 
@@ -134,18 +129,19 @@ def main():
     playlist_desc = create_description(args.path, track_info)
     if args.verbose:
         print('Pack name: {}'.format(name))
-        for track in track_info:
-            print(track.extra_shit)
 
     svc = get_authenticated_service(args)
     vid_results = [search_keywords(svc, track) for track in track_info]
-
+    if args.verbose:
+        for v in zip(track_info, vid_results):
+            print('{} - {}'.format(v[0].extra_shit, v[1]['snippet']['title']))
 
     if not args.noop:
         playlist_response = create_playlist(svc, name, desc=playlist_desc)
         playlist_id = args.playlist_id if args.playlist_id else playlist_response['id']
 
-        for vid in vid_results:
+        # Use this None filter to pass thru queries that had to results :(
+        for vid in [v for v in vid_results if v]:
             resp = add_item_to_playlist(svc, playlist_id, vid['id']['videoId'])
 
         first_vid_id = vid_results[0]['id']['videoId']
